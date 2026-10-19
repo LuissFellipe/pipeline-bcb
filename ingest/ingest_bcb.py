@@ -1,4 +1,3 @@
-"""Ingestão incremental de séries do SGS (Banco Central) para o schema raw."""
 import os
 from datetime import date, datetime, timedelta
 
@@ -6,13 +5,12 @@ import psycopg
 import requests
 
 SERIES = {
-    432: "selic_meta",       # % a.a., diária
-    433: "ipca_mensal",      # % no mês
-    1: "dolar_venda",        # R$/US$, diária
+    432: "selic_meta",
+    433: "ipca_mensal",
+    1: "dolar_venda",
 }
 DATA_INICIAL = date(2015, 1, 1)
 URL = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.{codigo}/dados"
-# A API limita consultas de séries diárias a janelas de 10 anos
 JANELA = timedelta(days=365 * 5)
 
 DDL = """
@@ -51,7 +49,6 @@ def buscar(codigo, inicio, fim):
             },
             timeout=60,
         )
-        # 404 = sem dados no intervalo (ex.: rodou duas vezes no mesmo dia)
         if resp.status_code != 404:
             resp.raise_for_status()
             registros += resp.json()

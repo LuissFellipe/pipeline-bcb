@@ -1,4 +1,3 @@
--- Um registro por mês com Selic, IPCA e dólar lado a lado
 with mensal as (
     select
         date_trunc('month', data)::date as mes,
@@ -12,7 +11,6 @@ with mensal as (
 com_acumulados as (
     select
         *,
-        -- IPCA acumulado em 12 meses: produto dos (1 + taxa) da janela
         (exp(sum(ln(1 + ipca_mes / 100)) over (
             order by mes rows between 11 preceding and current row
         )) - 1) * 100 as ipca_12m,
@@ -27,7 +25,6 @@ select
     round(selic_media_aa, 2) as selic_media_aa,
     round(ipca_mes, 2) as ipca_mes,
     round(case when meses_na_janela = 12 then ipca_12m end, 2) as ipca_12m,
-    -- Juro real ex-post (fórmula de Fisher)
     round(case when meses_na_janela = 12
         then ((1 + selic_media_aa / 100) / (1 + ipca_12m / 100) - 1) * 100 end, 2) as juro_real_aa,
     round(dolar_medio, 4) as dolar_medio,
