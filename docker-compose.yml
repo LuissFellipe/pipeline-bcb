@@ -1,0 +1,18 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: bcb
+      POSTGRES_PASSWORD: bcb
+      POSTGRES_DB: bcb
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bcb"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  pgdata:
