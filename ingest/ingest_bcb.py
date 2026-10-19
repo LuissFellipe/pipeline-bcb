@@ -1,4 +1,5 @@
 import os
+import time
 from datetime import date, datetime, timedelta
 
 import psycopg
@@ -36,22 +37,34 @@ def conectar():
     )
 
 
+def requisitar(url, params, tentativas=5):
+    for tentativa in range(1, tentativas + 1):
+        try:
+            resp = requests.get(url, params=params, timeout=60)
+            if resp.status_code == 404:
+                return []
+            resp.raise_for_status()
+            return resp.json()
+        except (requests.RequestException, ValueError) as erro:
+            if tentativa == tentativas:
+                raise
+            espera = 2 ** tentativa
+            print(f"falha na API ({erro.__class__.__name__}), nova tentativa em {espera}s")
+            time.sleep(espera)
+
+
 def buscar(codigo, inicio, fim):
     registros = []
     while inicio <= fim:
         fim_janela = min(inicio + JANELA, fim)
-        resp = requests.get(
+        registros += requisitar(
             URL.format(codigo=codigo),
-            params={
+            {
                 "formato": "json",
                 "dataInicial": inicio.strftime("%d/%m/%Y"),
                 "dataFinal": fim_janela.strftime("%d/%m/%Y"),
             },
-            timeout=60,
         )
-        if resp.status_code != 404:
-            resp.raise_for_status()
-            registros += resp.json()
         inicio = fim_janela + timedelta(days=1)
     return [
         (datetime.strptime(r["data"], "%d/%m/%Y").date(), r["valor"])
@@ -72,7 +85,7 @@ def main():
             if inicio > hoje:
                 print(f"{nome}: já atualizado")
                 continue
-            linhas = buscar(codigo, inicio, hoje)
+            linhas = [(d, v) for d, v in buscar(codigo, inicio, hoje) if d >= inicio]
             with conn.cursor() as cur:
                 cur.executemany(
                     """insert into raw.sgs_series (codigo_serie, nome_serie, data, valor)
