@@ -41,8 +41,6 @@ Consultar o resultado:
 docker compose exec postgres psql -U bcb -c "select * from marts.fct_indicadores_mensais order by mes desc limit 12"
 ```
 
-## Próximos passos
+## Agendamento e dashboard
 
-- [ ] Agendamento diário (Airflow ou GitHub Actions)
-- [ ] Dashboard no Metabase
-- [ ] Documentação com `dbt docs generate`
+Este repositório é o pipeline em si, executado sob demanda com `make pipeline`. A execução diária automática e o dashboard ficam no [painel-economico](https://github.com/LuissFellipe/painel-economico), que roda este mesmo pipeline todo dia às 08h e exibe a tabela `marts.fct_indicadores_mensais`.
