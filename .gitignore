@@ -4,3 +4,5 @@ dbt_bcb/target/
 dbt_bcb/logs/
 dbt_bcb/dbt_packages/
 __pycache__/
+site/data/
+site/dbt/

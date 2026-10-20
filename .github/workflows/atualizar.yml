@@ -1,0 +1,61 @@
+name: Atualizar indicadores
+
+# A Selic e o dólar saem todo dia útil. Às 22h UTC (19h em Brasília) a
+# cotação do dia já foi publicada.
+on:
+  schedule:
+    - cron: "0 22 * * 1-5"
+  workflow_dispatch:
+  push:
+    branches: [master]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: bcb
+          POSTGRES_PASSWORD: bcb
+          POSTGRES_DB: bcb
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U bcb"
+          --health-interval 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --frozen
+      # O banco nasce vazio: cada execução refaz a carga desde 2015, e o
+      # incremental do ingest_bcb.py vale para quem roda localmente.
+      - run: make ingest
+      - run: make transform
+      - run: make export
+      - run: make docs
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  publicar:
+    needs: pipeline
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

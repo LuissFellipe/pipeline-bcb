@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Juros, Inflação e Câmbio</title>
+  <meta name="description" content="Selic, IPCA, juro real e dólar desde 2015, a partir da API do Banco Central, atualizados todo dia.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <style>
+    :root {
+      color-scheme: light;
+      --fundo: #fcfcfb;
+      --superficie: #ffffff;
+      --borda: #e6e5e1;
+      --grade: #ecebe7;
+      --texto: #0b0b0b;
+      --texto-2: #52514e;
+      --acento: #2a78d6;
+      --s1: #2a78d6;
+      --s2: #eb6834;
+      --s3: #1baf7a;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        color-scheme: dark;
+        --fundo: #111214;
+        --superficie: #161719;
+        --borda: #2a2b2e;
+        --grade: #232427;
+        --texto: #f0efec;
+        --texto-2: #b3b2ab;
+        --acento: #86b6ef;
+        --s1: #3987e5;
+        --s2: #d95926;
+        --s3: #199e70;
+      }
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --fundo: #111214; --superficie: #161719; --borda: #2a2b2e; --grade: #232427;
+      --texto: #f0efec; --texto-2: #b3b2ab; --acento: #86b6ef;
+      --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--fundo);
+      color: var(--texto);
+      font: 15px/1.5 Inter, system-ui, sans-serif;
+    }
+    main { max-width: 960px; margin: 0 auto; padding: 40px 16px 56px; }
+    h1 { font-size: 30px; line-height: 1.15; margin: 0; letter-spacing: -0.02em; }
+    h2 { font-size: 17px; margin: 0 0 4px; }
+    .sub { color: var(--texto-2); margin: 8px 0 0; }
+    a { color: var(--acento); }
+
+    .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 28px 0 8px; }
+    .card { background: var(--superficie); border: 1px solid var(--borda); border-radius: 12px; padding: 14px 16px; }
+    .card .rotulo { color: var(--texto-2); font-size: 13px; font-weight: 500; }
+    .card strong { display: block; font-size: 28px; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin: 2px 0; }
+    .card .quando { color: var(--texto-2); font-size: 12px; }
+
+    section.grafico { background: var(--superficie); border: 1px solid var(--borda); border-radius: 12px; padding: 18px 18px 10px; margin-top: 16px; }
+    .explica { color: var(--texto-2); font-size: 13px; margin: 0 0 10px; }
+    .legenda { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; margin-bottom: 6px; }
+    .legenda span { display: inline-flex; align-items: center; gap: 6px; }
+    .legenda i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+    svg { width: 100%; display: block; overflow: visible; }
+    svg text { fill: var(--texto-2); font-size: 11px; font-variant-numeric: tabular-nums; }
+    svg .grade { stroke: var(--grade); }
+    svg .zero { stroke: var(--texto-2); stroke-width: 1; }
+    svg .linha { fill: none; stroke-width: 2; stroke-linejoin: round; }
+    svg .rotulo-fim { font-size: 12px; font-weight: 600; fill: var(--texto); }
+    svg .mira { stroke: var(--texto-2); }
+    svg .ponto { stroke: var(--superficie); stroke-width: 2; }
+
+    #dica {
+      position: fixed; pointer-events: none; z-index: 5;
+      background: var(--superficie); border: 1px solid var(--borda); border-radius: 8px;
+      padding: 8px 10px; font-size: 13px; box-shadow: 0 4px 14px rgba(0,0,0,.12);
+    }
+    #dica b { font-weight: 600; }
+    #dica .linha-dica { display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+    #dica i { width: 10px; height: 3px; border-radius: 2px; display: inline-block; }
+
+    details { margin-top: 16px; background: var(--superficie); border: 1px solid var(--borda); border-radius: 12px; padding: 12px 16px; }
+    summary { cursor: pointer; font-weight: 600; }
+    .tabela { overflow-x: auto; }
+    table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; margin-top: 10px; }
+    th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--grade); white-space: nowrap; }
+    th:first-child, td:first-child { text-align: left; }
+    th { color: var(--texto-2); font-weight: 500; }
+
+    footer { color: var(--texto-2); font-size: 13px; margin-top: 28px; }
+
+    @media (max-width: 720px) {
+      h1 { font-size: 24px; }
+      .cards { grid-template-columns: 1fr 1fr; }
+      .card strong { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Juros, inflação e câmbio desde 2015</h1>
+    <p class="sub">Dados do Banco Central (SGS), coletados e transformados todo dia por um pipeline com dbt · <span id="atualizado">carregando…</span></p>
+  </header>
+
+  <section class="cards" aria-label="Últimos valores">
+    <div class="card"><span class="rotulo">Selic meta</span><strong id="c-selic">–</strong><span class="quando" id="q-selic"></span></div>
+    <div class="card"><span class="rotulo">IPCA em 12 meses</span><strong id="c-ipca">–</strong><span class="quando" id="q-ipca"></span></div>
+    <div class="card"><span class="rotulo">Juro real</span><strong id="c-real">–</strong><span class="quando" id="q-real"></span></div>
+    <div class="card"><span class="rotulo">Dólar (venda)</span><strong id="c-dolar">–</strong><span class="quando" id="q-dolar"></span></div>
+  </section>
+
+  <section class="grafico">
+    <h2>Selic, inflação e juro real</h2>
+    <p class="explica">Em % ao ano. O juro real é a Selic descontada da inflação dos 12 meses anteriores: <code>(1 + Selic) / (1 + IPCA 12m) − 1</code>.</p>
+    <div class="legenda">
+      <span><i style="background:var(--s1)"></i>Selic (média do mês)</span>
+      <span><i style="background:var(--s2)"></i>IPCA em 12 meses</span>
+      <span><i style="background:var(--s3)"></i>Juro real</span>
+    </div>
+    <svg id="g-juros" role="img" aria-label="Selic, IPCA em 12 meses e juro real por mês desde 2015" height="300"></svg>
+  </section>
+
+  <section class="grafico">
+    <h2>Dólar</h2>
+    <p class="explica">Média mensal da cotação de venda (PTAX), em reais.</p>
+    <svg id="g-dolar" role="img" aria-label="Dólar médio por mês desde 2015" height="220"></svg>
+  </section>
+
+  <details>
+    <summary>Tabela dos últimos 24 meses</summary>
+    <div class="tabela"><table id="tabela"></table></div>
+  </details>
+
+  <footer>
+    Fonte: <a href="https://www3.bcb.gov.br/sgspub/" target="_blank" rel="noopener">Banco Central, Sistema Gerenciador de Séries Temporais</a> (séries 432, 433 e 1).
+    O IPCA 12 meses de cada dezembro é conferido contra o IPCA anual do IBGE por um teste do dbt.
+    · <a href="dbt/">Documentação dos dados</a>
+    · <a href="https://github.com/LuissFellipe/pipeline-bcb">Código do pipeline</a>
+  </footer>
+</main>
+<div id="dica" hidden></div>
+
+<script>
+const MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+const fmt = (v, casas = 2) => v == null ? "–" : v.toLocaleString("pt-BR", { minimumFractionDigits: casas, maximumFractionDigits: casas });
+const nomeMes = (m) => `${MESES[Number(m.slice(5, 7)) - 1]}/${m.slice(0, 4)}`;
+const dataBR = (d) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`;
+const $ = (id) => document.getElementById(id);
+
+function el(tag, attrs, pai) {
+  const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  pai.appendChild(e);
+  return e;
+}
+
+function dica(html, x, y) {
+  const d = $("dica");
+  d.innerHTML = html;
+  d.hidden = false;
+  d.style.left = `${Math.min(x + 14, innerWidth - d.offsetWidth - 8)}px`;
+  d.style.top = `${Math.min(y + 14, innerHeight - d.offsetHeight - 8)}px`;
+}
+
+// Gráfico de linhas com um eixo só, rótulo direto no fim de cada série e
+// mira que segue o mouse por toda a área.
+function linhas(svg, meses, series, { casas, unidade }) {
+  svg.replaceChildren();
+  const larg = svg.clientWidth, alt = Number(svg.getAttribute("height"));
+  const m = { t: 10, r: 92, b: 24, l: 36 };
+  const valores = series.flatMap((s) => s.valores.filter((v) => v != null));
+  let min = Math.min(0, ...valores), max = Math.max(...valores);
+  const passo = (max - min) > 12 ? 5 : (max - min) > 4 ? 2 : (max - min) > 2 ? 1 : 0.5;
+  min = Math.floor(min / passo) * passo; max = Math.ceil(max / passo) * passo;
+  const x = (i) => m.l + (i / (meses.length - 1)) * (larg - m.l - m.r);
+  const y = (v) => m.t + (1 - (v - min) / (max - min)) * (alt - m.t - m.b);
+
+  for (let v = min; v <= max + 1e-9; v += passo) {
+    el("line", { class: v === 0 ? "zero" : "grade", x1: m.l, x2: larg - m.r, y1: y(v), y2: y(v) }, svg);
+    el("text", { x: m.l - 6, y: y(v) + 4, "text-anchor": "end" }, svg).textContent = fmt(v, passo < 1 ? 1 : 0);
+  }
+  meses.forEach((mes, i) => {
+    if (mes.endsWith("-01") && Number(mes.slice(0, 4)) % 2 === 1) {
+      el("text", { x: x(i), y: alt - 6, "text-anchor": "middle" }, svg).textContent = mes.slice(0, 4);
+    }
+  });
+
+  const finais = [];
+  for (const s of series) {
+    let d = "", aberto = false;
+    s.valores.forEach((v, i) => {
+      if (v == null) { aberto = false; return; }
+      d += `${aberto ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`;
+      aberto = true;
+    });
+    el("path", { class: "linha", d, stroke: s.cor }, svg);
+    const ult = s.valores.findLastIndex((v) => v != null);
+    finais.push({ s, i: ult, y: y(s.valores[ult]) });
+  }
+  // Rótulos do fim sem sobreposição: empurra para baixo o que estiver a menos de 14px.
+  finais.sort((a, b) => a.y - b.y);
+  finais.forEach((f, k) => { if (k && f.y - finais[k - 1].y < 14) f.y = finais[k - 1].y + 14; });
+  for (const f of finais) {
+    el("text", { class: "rotulo-fim", x: x(f.i) + 6, y: f.y + 4 }, svg).textContent = `${f.s.curto} ${fmt(f.s.valores[f.i], casas)}${unidade}`;
+  }
+
+  const mira = el("line", { class: "mira", y1: m.t, y2: alt - m.b, visibility: "hidden" }, svg);
+  const pontos = series.map((s) => el("circle", { class: "ponto", r: 4, fill: s.cor, visibility: "hidden" }, svg));
+  svg.onmousemove = (ev) => {
+    const r = svg.getBoundingClientRect();
+    const i = Math.max(0, Math.min(meses.length - 1, Math.round(((ev.clientX - r.left - m.l) / (larg - m.l - m.r)) * (meses.length - 1))));
+    mira.setAttribute("x1", x(i)); mira.setAttribute("x2", x(i)); mira.setAttribute("visibility", "visible");
+    let html = `<b>${nomeMes(meses[i])}</b>`;
+    series.forEach((s, k) => {
+      const v = s.valores[i];
+      pontos[k].setAttribute("visibility", v == null ? "hidden" : "visible");
+      if (v != null) { pontos[k].setAttribute("cx", x(i)); pontos[k].setAttribute("cy", y(v)); }
+      html += `<div class="linha-dica"><i style="background:${s.cor}"></i>${s.nome}: ${fmt(v, casas)}${v == null ? "" : unidade}</div>`;
+    });
+    dica(html, ev.clientX, ev.clientY);
+  };
+  svg.onmouseleave = () => {
+    mira.setAttribute("visibility", "hidden");
+    pontos.forEach((p) => p.setAttribute("visibility", "hidden"));
+    $("dica").hidden = true;
+  };
+}
+
+let dados;
+function desenhar() {
+  const cor = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const meses = dados.meses.map((l) => l[0]);
+  const col = (nome) => dados.meses.map((l) => l[dados.colunas.indexOf(nome)]);
+  linhas($("g-juros"), meses, [
+    { nome: "Selic", curto: "Selic", cor: cor("--s1"), valores: col("selic") },
+    { nome: "IPCA 12 meses", curto: "IPCA", cor: cor("--s2"), valores: col("ipca_12m") },
+    { nome: "Juro real", curto: "Real", cor: cor("--s3"), valores: col("juro_real") },
+  ], { casas: 2, unidade: "%" });
+  linhas($("g-dolar"), meses, [
+    { nome: "Dólar", curto: "R$", cor: cor("--s1"), valores: col("dolar") },
+  ], { casas: 2, unidade: "" });
+}
+
+async function iniciar() {
+  dados = await (await fetch("data/indicadores.json")).json();
+  const u = dados.ultimos;
+  const comIpca = [...dados.meses].reverse().find((l) => l[3] != null);
+  $("c-selic").textContent = `${fmt(u.selic_meta.valor)}%`;
+  $("q-selic").textContent = `ao ano, em ${dataBR(u.selic_meta.data)}`;
+  $("c-ipca").textContent = `${fmt(comIpca[3])}%`;
+  $("q-ipca").textContent = `até ${nomeMes(comIpca[0])}`;
+  $("c-real").textContent = `${fmt(comIpca[4])}%`;
+  $("q-real").textContent = `ao ano, em ${nomeMes(comIpca[0])}`;
+  $("c-dolar").textContent = `R$ ${fmt(u.dolar_venda.valor, 4)}`;
+  $("q-dolar").textContent = `em ${dataBR(u.dolar_venda.data)}`;
+  $("atualizado").textContent = `atualizado em ${dataBR(dados.gerado_em.slice(0, 10))}`;
+
+  const linhasTab = dados.meses.slice(-24).reverse();
+  $("tabela").innerHTML = `<thead><tr><th>Mês</th><th>Selic % a.a.</th><th>IPCA no mês %</th><th>IPCA 12m %</th><th>Juro real % a.a.</th><th>Dólar R$</th></tr></thead><tbody>${
+    linhasTab.map((l) => `<tr><td>${nomeMes(l[0])}</td><td>${fmt(l[1])}</td><td>${fmt(l[2])}</td><td>${fmt(l[3])}</td><td>${fmt(l[4])}</td><td>${fmt(l[5], 4)}</td></tr>`).join("")
+  }</tbody>`;
+
+  desenhar();
+  let espera;
+  addEventListener("resize", () => { clearTimeout(espera); espera = setTimeout(desenhar, 150); });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", desenhar);
+}
+iniciar().catch((e) => { $("atualizado").textContent = "falha ao carregar os dados"; console.error(e); });
+</script>
+</body>
+</html>
